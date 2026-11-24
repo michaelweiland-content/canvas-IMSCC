@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Canvas Course Exporter</title>
+  <meta name="description" content="Pull question banks, quizzes, course files, pages, assignments and rubrics out of a Canvas course export (.imscc). Runs entirely in your browser.">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <h1>Canvas Course Exporter</h1>
+      <p class="tagline">Pull question banks, quizzes, files and other course content out of a Canvas course export (.imscc).</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p class="privacy" role="note">
+      <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5l-9-4Zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8Z"/></svg>
+      Your file is processed entirely in this browser. Nothing is uploaded or stored on a server.
+    </p>
+
+    <!-- Step 1 -->
+    <section class="card" id="step-upload" aria-labelledby="h-upload">
+      <h2 id="h-upload"><span class="num">1</span> Upload your Canvas course export</h2>
+      <label class="dropzone" id="dropzone" for="file-input">
+        <input type="file" id="file-input" accept=".imscc,.zip" hidden>
+        <span class="dz-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="40" height="40"><path fill="currentColor" d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96ZM14 13v4h-4v-4H7l5-5 5 5h-3Z"/></svg>
+        </span>
+        <span class="dz-main">Drop your <strong>.imscc</strong> file here, or <span class="link">choose a file</span></span>
+        <span class="dz-sub">In Canvas: Settings → Export Course Content → Course → Create Export</span>
+      </label>
+      <div id="load-status" class="status" aria-live="polite"></div>
+    </section>
+
+    <!-- Step 2 -->
+    <section class="card hidden" id="step-type" aria-labelledby="h-type">
+      <h2 id="h-type"><span class="num">2</span> What do you want to extract?</h2>
+      <div id="course-summary" class="course-summary"></div>
+      <div id="type-grid" class="cat-sections"></div>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="card hidden" id="step-select" aria-labelledby="h-select">
+      <h2 id="h-select"><span class="num">3</span> Choose items</h2>
+      <div class="toolbar">
+        <input type="search" id="filter" placeholder="Filter by name…" aria-label="Filter by name">
+        <button type="button" class="btn-small" id="select-all">Select all</button>
+        <button type="button" class="btn-small" id="select-none">Clear</button>
+        <span id="selected-count" class="muted"></span>
+      </div>
+      <div id="collection-list"></div>
+    </section>
+
+    <!-- Step 4 -->
+    <section class="card hidden" id="step-options" aria-labelledby="h-options">
+      <h2 id="h-options"><span class="num">4</span> Options</h2>
+      <div class="options">
+        <fieldset data-for="assess">
+          <legend>Quiz documents</legend>
+          <label><input type="radio" name="version" value="key" checked> Answer key <span class="muted">(correct answers marked)</span></label>
+          <label><input type="radio" name="version" value="student"> Student copy <span class="muted">(no answers)</span></label>
+          <label><input type="radio" name="version" value="both"> Both</label>
+        </fieldset>
+        <fieldset data-for="assess">
+          <legend>Quiz files</legend>
+          <label><input type="radio" name="output" value="separate" checked> One Word file per bank or quiz</label>
+          <label><input type="radio" name="output" value="combined"> All banks and quizzes in one Word file</label>
+        </fieldset>
+        <fieldset data-for="assess">
+          <legend>Include in quizzes</legend>
+          <label><input type="checkbox" id="opt-feedback" checked> Answer feedback <span class="muted">(answer key only)</span></label>
+          <label><input type="checkbox" id="opt-points" checked> Point values</label>
+          <label><input type="checkbox" id="opt-expand" checked> Questions pulled from banks, listed inside each quiz</label>
+          <label><input type="checkbox" id="opt-table"> Answer summary table at the end</label>
+        </fieldset>
+        <fieldset data-for="files">
+          <legend>Course files</legend>
+          <label><input type="radio" name="folders" value="keep" checked> Keep Canvas folder structure</label>
+          <label><input type="radio" name="folders" value="flat"> Put all files in one folder</label>
+        </fieldset>
+        <fieldset data-for="content">
+          <legend>Pages, assignments &amp; discussions</legend>
+          <label><input type="checkbox" id="opt-settings" checked> Include settings <span class="muted">(points, due dates, submission type)</span></label>
+        </fieldset>
+      </div>
+      <div class="actions">
+        <p id="output-summary" class="muted small"></p>
+        <button type="button" class="btn-primary" id="generate" disabled>Create download</button>
+        <div class="progress hidden" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="bar" id="progress-bar"></div></div>
+        <div id="gen-status" class="status" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <details class="card help">
+      <summary>Help and limitations</summary>
+      <ul>
+        <li><strong>One download:</strong> everything you pick comes as a single .zip with a folder for each kind of content. If you pick just one item, you get that file directly.</li>
+        <li><strong>Getting the file:</strong> in your Canvas course go to <em>Settings → Export Course Content</em>, choose <em>Course</em>, and download the <code>.imscc</code> file when it's ready.</li>
+        <li><strong>Classic question banks</strong> are always included in a course export.</li>
+        <li><strong>New Quizzes item banks</strong> are only included when a New Quiz in the course uses them. A bank no quiz uses won't be in the file.</li>
+        <li><strong>Random question groups:</strong> Canvas picks questions at random when a student takes the quiz. The Word file lists the whole pool and notes how many get picked.</li>
+        <li><strong>Question types:</strong> multiple choice, true/false, multiple answers, matching, fill in the blank(s), dropdowns, numerical, formula, essay, file upload and text-only items are supported. Newer New Quizzes types (hot spot, ordering, categorization) are shown as well as possible and flagged for review.</li>
+        <li><strong>Course files</strong> (Word, PDF, PowerPoint, images, video) are copied out exactly as they were uploaded. Files linked from Google Drive, OneDrive, YouTube or Canvas Studio aren't stored in the export.</li>
+        <li><strong>Not in any export:</strong> student submissions, grades, quiz attempts and discussion replies. Canvas course exports contain course content only.</li>
+        <li><strong>Equations</strong> appear as their LaTeX text. Images stored in the course files are embedded; images linked from outside Canvas are shown as a note.</li>
+        <li><strong>Data handling:</strong> treat the Word files with the same care as the original exam content.</li>
+      </ul>
+    </details>
+  </main>
+
+  <footer class="site-footer wrap">
+    <p class="muted">Works with Canvas course exports (.imscc). Uses <a href="https://stuk.github.io/jszip/">JSZip</a> and <a href="https://docx.js.org/">docx</a> (MIT licensed), bundled with this site.</p>
+  </footer>
+
+  <script src="vendor/jszip.min.js"></script>
+  <script src="vendor/docx.iife.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/content-parser.js"></script>
+  <script src="js/html-to-docx.js"></script>
+  <script src="js/word-builder.js"></script>
+  <script src="js/content-builder.js"></script>
+  <script src="js/extractors.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
